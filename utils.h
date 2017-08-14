@@ -12,15 +12,7 @@
 #include <openssl/dh.h>
 #include "types.h"
 
-#define QUALITY_ONE			1000000000	// 10e9
-
-#define nothing()			do {} while (0)
-#define fallthru()			do {} while (0)
-#define NUMBER(x)			(sizeof(x)/sizeof((x)[0]))
-#define ADDRESS(p)			strHex(uint64( ((char*) p) - ((char*) 0)))
-#define ADDRESS_SHARED(p)	strHex(uint64( ((char*) (p).get()) - ((char*) 0)))
-
-#define isSetBit(x,y)		(!!((x) & (y)))
+//DEL #define isSetBit(x,y)		(!!((x) & (y)))
 
 // maybe use http://www.mail-archive.com/licq-commits@googlegroups.com/msg02334.html
 #ifdef WIN32
@@ -56,7 +48,7 @@ extern uint64_t be64toh(uint64_t value);
 #define be64toh(x) betoh64(x)
 #endif
 
-
+//TODO: what are tese vtf good for? I barely see a usage
 #define vt_f_black          "\033[30m"
 #define vt_f_red            "\033[31m"
 #define vt_f_green          "\033[32m"
@@ -105,7 +97,7 @@ int iToSeconds(boost::posix_time::ptime ptWhen);
 boost::posix_time::ptime ptFromSeconds(int iSeconds);
 uint64_t utFromSeconds(int iSeconds);
 
-extern std::string urlEncode(const std::string& strSrc);
+//DEL extern std::string urlEncode(const std::string& strSrc);
 
 /*
 void intIPtoStr(int ip,std::string& retStr);

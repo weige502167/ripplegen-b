@@ -36,17 +36,21 @@
 
 #define UPDATE_ITERATIONS 1000
 
+
+//RARACH: COMPARE THIS TO THE OTHER VERSION. I START TO FEEL LIKE THAT ONE IS ACTUALLY BETTER :-O
+
+
 using namespace std;
 
 boost::mutex mutex;
-bool fDone = false;
+bool fDone = false;			//TODO: what is this good for?
 
 uint64_t start_time;
 uint64_t total_searched;
 
 const char* ALPHABET = "rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxyz";
 
-char charHex(int iDigit)
+char charHex(int iDigit)			//TODO: move this to utils.h
 {
     return iDigit < 10 ? '0' + iDigit : 'A' - 10 + iDigit;
 }
@@ -80,7 +84,7 @@ void LoopThread(unsigned int n, uint64_t eta50, string* ppattern,
         account_id = naAccount.humanAccountID();
         count++;
         if (count % UPDATE_ITERATIONS == 0) {
-            boost::unique_lock<boost::mutex> lock(mutex);
+            boost::unique_lock<boost::mutex> lock(mutex);				//TODO: No way. Get rid of the mutex
             total_searched += count - last_count;
             last_count = count;
             uint64_t nSecs = time(NULL) - start_time;
@@ -102,6 +106,7 @@ void LoopThread(unsigned int n, uint64_t eta50, string* ppattern,
                 }
             }
 
+			//TODO: simplify this. We don't need that much info
             cout << "# Thread " << n << ": " << count << " seeds." << endl
                  << "#" << endl
                  << "#           Total Speed:    " << speed << " seeds/second" << endl

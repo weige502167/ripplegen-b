@@ -1,5 +1,6 @@
 .nuget
 Debug/
+packages/
 RippleGen.opensdf
 RippleGen.sdf
 RippleGen.user

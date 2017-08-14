@@ -24,10 +24,12 @@
 
 // maybe use http://www.mail-archive.com/licq-commits@googlegroups.com/msg02334.html
 #ifdef WIN32
+#include <winsock.h>
+#define htobe32(x) htonl(x)
+#define be32toh(x) ntohl(x)
+
 extern uint64_t htobe64(uint64_t value);
 extern uint64_t be64toh(uint64_t value);
-extern uint32_t htobe32(uint32_t value);
-extern uint32_t be32toh(uint32_t value);
 #elif __APPLE__
 #include <libkern/OSByteOrder.h>
 

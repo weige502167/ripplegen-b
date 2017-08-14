@@ -1,1 +1,7 @@
-ripplegen
+.nuget
+Debug/
+RippleGen.opensdf
+RippleGen.sdf
+RippleGen.user
+RippleGen.v12.suo
+RippleGen.vcxproj.user

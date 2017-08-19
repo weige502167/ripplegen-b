@@ -1,8 +1,10 @@
 .nuget
+.vs
 Debug/
 packages/
 RippleGen.opensdf
 RippleGen.sdf
 RippleGen.user
 RippleGen.v12.suo
+RippleGen.VC.db
 RippleGen.vcxproj.user

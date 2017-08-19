@@ -34,7 +34,7 @@
 #include <boost/thread.hpp>
 #include <openssl/rand.h>
 
-#define UPDATE_ITERATIONS 1000
+#define UPDATE_ITERATIONS 10000
 
 
 //RARACH: COMPARE THIS TO THE OTHER VERSION. I START TO FEEL LIKE THAT ONE IS ACTUALLY BETTER :-O
@@ -45,15 +45,12 @@ using namespace std;
 boost::mutex mutex;
 bool fDone = false;			//TODO: what is this good for?
 
-uint64_t start_time;
-uint64_t total_searched;
+//DEL uint64_t start_time;
+//DEL uint64_t total_searched;
 
 const char* ALPHABET = "rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxyz";
 
-char charHex(int iDigit)			//TODO: move this to utils.h
-{
-    return iDigit < 10 ? '0' + iDigit : 'A' - 10 + iDigit;
-}
+
 
 void getRand(unsigned char *buf, int num)
 {
@@ -62,6 +59,17 @@ void getRand(unsigned char *buf, int num)
         assert(false);
         throw std::runtime_error("Entropy pool not seeded");
     }
+}
+
+static bool startsWith(const string& input, const string& pattern)
+{
+	for (int i = 0; i < pattern.size(); i++)
+	{
+		if (input[i] != pattern[i])
+			return false;
+	}
+
+	return true;
 }
 
 void LoopThread(unsigned int n, uint64_t eta50, string* ppattern,
@@ -75,54 +83,39 @@ void LoopThread(unsigned int n, uint64_t eta50, string* ppattern,
     uint128 key;
     getRand(key.begin(), key.size());
 
+	uint64_t start_time = time(NULL);
     uint64_t count = 0;
-    uint64_t last_count = 0;
+//DEL    uint64_t last_count = 0;
     do {
         naSeed.setSeed(key);
         RippleAddress naGenerator = createGeneratorPublic(naSeed);
         naAccount.setAccountPublic(naGenerator.getAccountPublic(), 0);
         account_id = naAccount.humanAccountID();
         count++;
+
+		if (startsWith(account_id, pattern))
+		{
+			Beep(750, 500);
+			string secret = naSeed.humanSeed();
+			cout << endl << "secret: " << secret << "\t public: " << account_id << "\t (pattern: " << pattern << ")" << endl << endl;
+		}
+
         if (count % UPDATE_ITERATIONS == 0) {
-            boost::unique_lock<boost::mutex> lock(mutex);				//TODO: No way. Get rid of the mutex
-            total_searched += count - last_count;
-            last_count = count;
+//DEL            boost::unique_lock<boost::mutex> lock(mutex);				//TODO: No way. Get rid of the mutex
+//DEL            last_count = count;
             uint64_t nSecs = time(NULL) - start_time;
-            double speed = (1.0 * total_searched)/nSecs;
-            const char* unit = "seconds";
-            double eta50f = eta50/speed;
-            if (eta50f > 100) {
-                unit = "minutes";
-                eta50f /= 60;
+			start_time = time(NULL);
 
-                if (eta50f > 100) {
-                    unit = "hours";
-                    eta50f /= 60;
-
-                    if (eta50f > 48) {
-                        unit = "days";
-                        eta50f /= 24;
-                    }
-                }
-            }
-
-			//TODO: simplify this. We don't need that much info
-            cout << "# Thread " << n << ": " << count << " seeds." << endl
-                 << "#" << endl
-                 << "#           Total Speed:    " << speed << " seeds/second" << endl
-                 << "#           Total Searched: " << total_searched << endl
-                 << "#           Total Time:     " << nSecs << " seconds" << endl
-                 << "#           ETA 50%:        " << eta50f << " " << unit << endl
-                 << "#           Last:           " << account_id << endl
-                 << "#           Pattern:        " << pattern << endl
-                 << "#" << endl;
+			cout << "(thread " << n << ") Another " << UPDATE_ITERATIONS << " items tested (took " << nSecs << "sec, last " << account_id << ")" << endl;
         }
         key++;
-        boost::this_thread::yield();
-    } while ((account_id.substr(0, pattern.size()) != pattern) && !fDone);
+//DEL        boost::this_thread::yield();
+//DEL    } while ((account_id.substr(0, pattern.size()) != pattern) && !fDone);
+	} while (/*DEL?    !startsWith(account_id, pattern) &&*/ !fDone);
 
-    boost::unique_lock<boost::mutex> lock(mutex);
-    if (fDone) return;
+//DEL    boost::unique_lock<boost::mutex> lock(mutex);
+    if (fDone)
+		return;
     fDone = true;
 
     cout << "#    *** Found by thread " << n << ". ***" << endl
@@ -196,7 +189,7 @@ int main(int argc, char* argv[])
 
     uint64_t eta50 = getEta50(pattern);
 
-    start_time = time(NULL);
+//DEL    start_time = time(NULL);
     string master_seed, master_seed_hex, account_id;
     vector<boost::thread*> vpThreads;
     for (unsigned int i = 0; i < threads; i++)

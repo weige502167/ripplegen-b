@@ -117,7 +117,10 @@ std::string strJoin(Iterator first, Iterator last, std::string strSeperator)
 	return ossValues.str();
 }
 
-char charHex(int iDigit);
+inline static char charHex(int iDigit)
+{
+	return iDigit < 10 ? '0' + iDigit : 'A' - 10 + iDigit;
+}
 
 template<class Iterator>
 std::string strHex(Iterator first, int iSize)

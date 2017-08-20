@@ -32,8 +32,7 @@
 #include <fstream>
 #include <iostream>
 #include <stdint.h>
-#include <boost/algorithm/string/predicate.hpp>
-#include <boost/thread.hpp>
+#include <thread>
 #include <openssl/rand.h>
 
 #define UPDATE_ITERATIONS 10000
@@ -94,7 +93,7 @@ void LoopThread(unsigned int n, vector<string> sourcePatterns)
 
         for (size_t i = 0; i < numOfPatterns; i++)
         {
-            if (/*startsWith*/boost::starts_with(account_id, patterns[i]))
+            if (startsWith(account_id, patterns[i]))
             {
                 Beep(750, 500);
                 string secret = naSeed.humanSeed();
@@ -161,11 +160,11 @@ int main(int argc, char* argv[])
     {
         char* arg = argv[i];
 
-        if (boost::starts_with(arg, "--threads="))
+        if (startsWith(arg, "--threads="))
         {
-            threads = boost::lexical_cast<int>(arg + 10);
+            threads = std::stoi(arg + 10);
         }
-        if (boost::starts_with(arg, "--input="))
+        if (startsWith(arg, "--input="))
         {
             inputFilename = arg + 8;
         }
@@ -186,7 +185,7 @@ int main(int argc, char* argv[])
 
     if (0 == threads)
     {
-        unsigned int cpus = boost::thread::hardware_concurrency();
+        unsigned int cpus = std::thread::hardware_concurrency();
         cout << "Thread count not specified. Found " << cpus << " logical units, will use them all" << endl;
         threads = cpus;
     }
@@ -221,15 +220,19 @@ int main(int argc, char* argv[])
         cout << "#" << endl
              << "# Running " << threads << " thread" << (threads == 1 ? "" : "s") << "." << endl
              << "#" << endl
-             << "# Generating seed for " << patterns.size() << " patterns" << endl << endl;
+             << "# Generating seeds for " << patterns.size() << " patterns" << endl << endl;
     }
 
-    vector<boost::thread*> vpThreads;
+    vector<std::thread> vpThreads(threads);
     for (unsigned int i = 0; i < threads; i++)
-        vpThreads.push_back(new boost::thread(LoopThread, i, patterns));
+    {
+        vpThreads[i] = std::thread(LoopThread, i, patterns);
+    }
 
     for (unsigned int i = 0; i < threads; i++)
-        vpThreads[i]->join();
+    {
+        vpThreads[i].join();
+    }
 
     return 0;
 }

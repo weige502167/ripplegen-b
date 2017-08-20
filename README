@@ -4,32 +4,24 @@
 -----------------------------------------------------------------------------
 
 A multithreaded vanity account generating tool for the Ripple p2p network.
+For performance reasons, only prefix search is currently supported.
 
 Requires Boost and OpenSSL.
 
 Build: ./make
-Run:   ./ripplegen [pattern] [threads]
+Run:   ./ripplegen [--threads=<thread_count>] [--input=<path_to_file>]
 
 The threads parameter is optional. If omitted, the optimal value is selected
-depending on your hardware.
+depending on your hardware. The input file must contain one prefix per line.
+The generator will run forever, writing all found matches to standard output
+and .dat files in current location.
 
 -----------------------------------------------------------------------------
 
 TODO:
-    - Validate patterns correctly, make sure the user doesn't end
-      up waiting forever for a pattern that will never occur.
-    
-      user tip: Try r?? and r??? and make sure they are found within a
-        reasonable amount of time before trying the full pattern and
-        make sure you only use characters from the base58 alphabet:
-        123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz
-
-    - Provide a better indication of current speed (not just average speed)
-      and a speed breakdown per thread.
-
-    - Make it easier to plug in different alphabets and rules.
-
     - Remove unused portions of source code.
+    
+    - Introdue prefix/suffix/regex (+case sensitivity) modes
 
     - Improve performance by removing unnecessary branching,
       excessive calls, unnecessary memory allocations and copies,
@@ -46,14 +38,12 @@ TODO:
       allowed to provide an initial search value either directly or as a
       passphrase hash (although this can compromise security).
 
-    - Support for wider pattern formats. Wildcards, ranges, or even
-      regexes.
-
     - Support for coordinated searches across many machines.
 
-- Eric Lombrozo
-
-(Tip Jar: rEric5Q6297byt1PyM5EMx2X3qm9x9RrEb)
+Based on original RippleGen by Eric Lombrozo (github.com/CodeSharp).
+After being developed only with Visual Studio on Windows, any compatibility
+with other environment is not guaranted. Original makefile is left here
+should somebody need it.
 
 -----------------------------------------------------------------------------
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR

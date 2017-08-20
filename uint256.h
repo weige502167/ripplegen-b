@@ -13,7 +13,7 @@
 #include <cstring>
 #include <cassert>
 
-#include <boost/functional/hash.hpp>
+//DEL #include <boost/functional/hash.hpp>
 
 #include "types.h"
 #include "utils.h"
@@ -161,12 +161,12 @@ public:
 		return *this;
 	}
 
-	std::size_t hash_combine(std::size_t& seed) const
+/*DEL	std::size_t hash_combine(std::size_t& seed) const
 	{
 		for (int i = 0; i < WIDTH; ++i)
 			boost::hash_combine(seed, pn[i]);
 		return seed;
-	}
+	}*/
 
 	friend inline int compare(const base_uint& a, const base_uint& b)
 	{

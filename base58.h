@@ -18,7 +18,7 @@
 #include <string>
 #include <algorithm>
 #include <vector>
-#include <boost/functional/hash.hpp>
+//DEL #include <boost/functional/hash.hpp>
 
 #include "bignum.h"
 #include "BitcoinUtil.h"

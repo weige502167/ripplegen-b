@@ -6,8 +6,8 @@
 #include "key.h"
 #include "uchar_vector.h"
 
-#include <boost/thread/mutex.hpp>
-#include <boost/unordered_map.hpp>
+//DEL #include <boost/thread/mutex.hpp>
+//DEL #include <boost/unordered_map.hpp>
 
 typedef enum {
     VER_NONE                = 1,
@@ -76,7 +76,7 @@ uint160 RippleAddress::getAccountID() const
         return Hash160(vchData);
 
     default:
-        throw std::runtime_error(str(boost::format("bad source: %d") % int(nVersion)));
+        throw std::runtime_error("bad source: " + std::to_string(nVersion));
     }
 }
 
@@ -106,7 +106,7 @@ std::string RippleAddress::humanAccountID() const
     }
 
     default:
-        throw std::runtime_error(str(boost::format("bad source: %d") % int(nVersion)));
+        throw std::runtime_error("bad source: " + std::to_string(nVersion));
     }
 }
 
@@ -120,7 +120,7 @@ std::string RippleAddress::humanSeed() const
         return ToString();
 
     default:
-        throw std::runtime_error(str(boost::format("bad source: %d") % int(nVersion)));
+        throw std::runtime_error("bad source: " + std::to_string(nVersion));
     }
 }
 

@@ -1,6 +1,7 @@
 #ifndef __UTILS__
 #define __UTILS__
 
+
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/format.hpp>
 #include <boost/version.hpp>
@@ -8,6 +9,7 @@
 #if BOOST_VERSION < 104700
 #error Boost 1.47 or later is required
 #endif
+
 
 #include <openssl/dh.h>
 #include "types.h"
@@ -90,10 +92,10 @@ extern uint64_t be64toh(uint64_t value);
 
 #define vt_reset    vt_f_default vt_b_default vt_normal vt_n_disable vt_u_disable
 
-boost::posix_time::ptime ptEpoch();
+/*DEL boost::posix_time::ptime ptEpoch();
 int iToSeconds(boost::posix_time::ptime ptWhen);
 boost::posix_time::ptime ptFromSeconds(int iSeconds);
-uint64_t utFromSeconds(int iSeconds);
+uint64_t utFromSeconds(int iSeconds); */
 
 /*DEL template<class Iterator>
 std::string strJoin(Iterator first, Iterator last, std::string strSeperator)
@@ -147,6 +149,7 @@ inline std::string strHex(const uint64 uiHost)
 	return strHex((unsigned char*) &uBig, sizeof(uBig));
 }
 
+/*DEL
 inline static std::string sqlEscape(const std::string& strSrc)
 {
 	static boost::format f("X'%s'");
@@ -186,6 +189,7 @@ bool isZero(Iterator first, int iSize)
 
 	return !iSize;
 }
+*/
 
 int charUnHex(char cDigit);
 int strUnHex(std::string& strDst, const std::string& strSrc);
@@ -212,6 +216,7 @@ inline std::string strGetEnv(const std::string& strKey)
 	return getenv(strKey.c_str()) ? getenv(strKey.c_str()) : "";
 }
 
+/*DEL
 template<typename T> T lexical_cast_s(const std::string& string)
 { // lexically cast a string to the selected type. Does not throw
 	try
@@ -245,7 +250,9 @@ template<typename T> std::string lexical_cast_it(const T& t)
 { // lexicaly cast the selected type to a string. Does not throw
 	return boost::lexical_cast<std::string>(t);
 }
+*/
 
+/*DEL
 template<typename T> T range_check(const T& value, const T& minimum, const T& maximum)
 {
 	if ((value < minimum) || (value > maximum))
@@ -275,7 +282,7 @@ template<typename T, typename U> T range_check_cast(const U& value, const T& min
 }
 
 bool parseUrl(const std::string& strUrl, std::string& strScheme, std::string& strDomain, int& iPort, std::string& strPath);
-
+*/
 extern void NameThread(const char *);
 
 extern bool HaveSustain();
@@ -288,8 +295,8 @@ extern std::string DoSustain();
 #include			 	<functional>
 #define UPTR_T			std::unique_ptr
 #define MOVE_P(p)		std::move(p)
-#define BIND_TYPE		std::bind
-#define FUNCTION_TYPE	std::function
+//DEL #define BIND_TYPE		std::bind
+//DEL #define FUNCTION_TYPE	std::function
 #define P_1				std::placeholders::_1
 #define P_2				std::placeholders::_2
 #define P_3				std::placeholders::_3
@@ -297,12 +304,12 @@ extern std::string DoSustain();
 
 #else
 
-#include 				<boost/bind.hpp>
-#include				<boost/function.hpp>
+//DEL #include 				<boost/bind.hpp>
+//DEL #include				<boost/function.hpp>
 #define UPTR_T			std::auto_ptr
 #define MOVE_P(p)		(p)
-#define BIND_TYPE		boost::bind
-#define FUNCTION_TYPE	boost::function
+//DEL #define BIND_TYPE		boost::bind
+//DEL #define FUNCTION_TYPE	boost::function
 #define P_1				_1
 #define P_2				_2
 #define P_3				_3

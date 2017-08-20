@@ -29,27 +29,16 @@
 //
 
 #include "RippleAddress.h"
+#include <fstream>
 #include <iostream>
 #include <stdint.h>
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/thread.hpp>
 #include <openssl/rand.h>
 
 #define UPDATE_ITERATIONS 10000
 
-
-//RARACH: COMPARE THIS TO THE OTHER VERSION. I START TO FEEL LIKE THAT ONE IS ACTUALLY BETTER :-O
-
-
 using namespace std;
-
-boost::mutex mutex;
-bool fDone = false;			//TODO: what is this good for?
-
-//DEL uint64_t start_time;
-//DEL uint64_t total_searched;
-
-const char* ALPHABET = "rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxyz";
-
 
 
 void getRand(unsigned char *buf, int num)
@@ -63,29 +52,39 @@ void getRand(unsigned char *buf, int num)
 
 static bool startsWith(const string& input, const string& pattern)
 {
-	for (int i = 0; i < pattern.size(); i++)
-	{
-		if (input[i] != pattern[i])
-			return false;
-	}
+    for (int i = 0; i < pattern.size(); i++)
+    {
+        if (input[i] != pattern[i])
+            return false;
+    }
 
-	return true;
+    return true;
 }
 
-void LoopThread(unsigned int n, uint64_t eta50, string* ppattern,
-                string* pmaster_seed, string* pmaster_seed_hex, string* paccount_id)
+void LoopThread(unsigned int n, vector<string> sourcePatterns)
 {
     RippleAddress naSeed;
     RippleAddress naAccount;
-    string        pattern = *ppattern;
     string        account_id;
+
+    char fname[128];
+    sprintf_s(fname, 128, "result_%i.dat", n);
 
     uint128 key;
     getRand(key.begin(), key.size());
 
-	uint64_t start_time = time(NULL);
+    uint64_t start_time = time(NULL);
     uint64_t count = 0;
-//DEL    uint64_t last_count = 0;
+
+    //TODO: I'm not sure how these things work in C++ :-(  Better make own copy of the vector to avoid concurrency problems
+    size_t numOfPatterns = sourcePatterns.size();
+    vector<string> patterns;
+    for (int i = 0; i < numOfPatterns; i++)
+    {
+        string copy = sourcePatterns[i].c_str();
+        patterns.push_back(copy);
+    }
+
     do {
         naSeed.setSeed(key);
         RippleAddress naGenerator = createGeneratorPublic(naSeed);
@@ -93,118 +92,144 @@ void LoopThread(unsigned int n, uint64_t eta50, string* ppattern,
         account_id = naAccount.humanAccountID();
         count++;
 
-		if (startsWith(account_id, pattern))
-		{
-			Beep(750, 500);
-			string secret = naSeed.humanSeed();
-			cout << endl << "secret: " << secret << "\t public: " << account_id << "\t (pattern: " << pattern << ")" << endl << endl;
-		}
+        for (size_t i = 0; i < numOfPatterns; i++)
+        {
+            if (/*startsWith*/boost::starts_with(account_id, patterns[i]))
+            {
+                Beep(750, 500);
+                string secret = naSeed.humanSeed();
+                cout << endl << "secret: " << secret << "\t public: " << account_id << "\t (pattern: " << patterns[i] << ")" << endl << endl;
 
-        if (count % UPDATE_ITERATIONS == 0) {
-//DEL            boost::unique_lock<boost::mutex> lock(mutex);				//TODO: No way. Get rid of the mutex
-//DEL            last_count = count;
+                FILE* f = fopen(fname, "at");
+                if (f)
+                {
+                    fprintf(f, "%s;%s;%s\n", account_id.c_str(), naSeed.humanSeed().c_str(), patterns[i].c_str());
+                    fclose(f);
+                }
+
+                cout << "DEBUG: key=" << key.ToString() << endl << "===============================" << endl;
+            }
+        }
+
+        if (count % UPDATE_ITERATIONS == 0)
+        {
             uint64_t nSecs = time(NULL) - start_time;
-			start_time = time(NULL);
-
-			cout << "(thread " << n << ") Another " << UPDATE_ITERATIONS << " items tested (took " << nSecs << "sec, last " << account_id << ")" << endl;
+            start_time = time(NULL);
+            cout << "(thread " << n << ") Another " << UPDATE_ITERATIONS << " items tested (took " << nSecs << "sec, last " << account_id << ")" << endl;
         }
         key++;
-//DEL        boost::this_thread::yield();
-//DEL    } while ((account_id.substr(0, pattern.size()) != pattern) && !fDone);
-	} while (/*DEL?    !startsWith(account_id, pattern) &&*/ !fDone);
+    } while (true);
 
-//DEL    boost::unique_lock<boost::mutex> lock(mutex);
-    if (fDone)
-		return;
-    fDone = true;
-
-    cout << "#    *** Found by thread " << n << ". ***" << endl
-         << "#" << endl;
-
-    *pmaster_seed = naSeed.humanSeed();
-    *pmaster_seed_hex = naSeed.getSeed().ToString();
-    *paccount_id = account_id;
+//What would this be good for?    string pmaster_seed_hex = naSeed.getSeed().ToString();
 }
 
 
 // isPatternValid can be changed depending on encoding being used.
 bool isPatternValid(const string& pattern, string& msg)
 {
-    // Check for valid ripple account id.
-    // TODO: Implement it correctly
-    if (pattern.size() == 0) {
-        msg = "Pattern cannot be empty.";
-        return false;
-    }
-    if (pattern[0] != 'r') {
-        msg = "Pattern must begin with an 'r'.";
+    if (pattern[0] != 'r' || pattern.find("0") != string::npos || pattern.find("l") != string::npos ||
+        pattern.find("I") != string::npos || pattern.find("O") != string::npos)
+    {
+        msg = "Pattern must begin with an 'r' and must not contain any of '0', 'l', 'I', 'O'.";
         return false;
     }
     return true;
 }
 
-// eta50 = ceiling(1/log_2(n/(n-1))) where n = 58^length
-//   the minimum number of iterations such that there's at
-//   least a 50% chance of finding a match.
-uint64_t getEta50(const string& pattern)
+void usage()
 {
-    const uint64_t eta50[] = { 0, 0, 40, 2332, 135241, 7843997, 454951843, 26387206905ull,
-                               1530458000460ull, 8876654026661ull, 5148460713546319ull,
-                               298610721385686486ull, 17319421840369816160ull };
-    unsigned int len = pattern.size();
-    if (len > 12) return 0xffffffffffffffffull;
-    return eta50[len]; 
+    cout << "#" << endl
+        << "# Usage: ripplegen.exe [--threads=<number_of_threads_to_run>] --input=<file_with_patterns> ... " << endl
+        << "# Patterns are only used for prefix check, i.e. matching addresses will start with a pattern." << endl
+        << "# Available letters: rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxyz" << endl
+        << "# Input file must contain one prefix pattern per line" << endl
+        << "#" << endl;
 }
 
 int main(int argc, char* argv[])
 {
-    if (argc < 2) {
-        cout << "# Usage: " << argv[0] << " [pattern] [threads=cpus available]" << endl
-             << "#" << endl;
+    if (argc < 1)
+    {
+        usage();
         return 0;
     }
 
-    string pattern = argv[1];
+    string inputFilename;
+    unsigned int threads = 0;
+
+    for (int i = 1; i < argc; i++)
+    {
+        char* arg = argv[i];
+
+        if (boost::starts_with(arg, "--threads="))
+        {
+            threads = boost::lexical_cast<int>(arg + 10);
+        }
+        if (boost::starts_with(arg, "--input="))
+        {
+            inputFilename = arg + 8;
+        }
+    }
+
+    if (inputFilename.empty())
+    {
+        usage();
+        return 0;
+    }
+    ifstream infile(inputFilename);
+    if (!infile.good())
+    {
+        //File not found
+        usage();
+        return 0;
+    }
+
+    if (0 == threads)
+    {
+        unsigned int cpus = boost::thread::hardware_concurrency();
+        cout << "Thread count not specified. Found " << cpus << " logical units, will use them all" << endl;
+        threads = cpus;
+    }
+
+    vector<string> patterns;
+    string line;
     string msg;
-    if (!isPatternValid(pattern, msg)) {
-        cout << "# " << msg << endl
-             << "#" << endl;
-        return -2;
+
+    while (infile >> line)
+    {
+        if (line.empty())
+        {
+            continue;
+        }
+        if (isPatternValid(line, msg))
+        {
+            patterns.push_back(line);
+        }
+        else
+        {
+            cout << "Bad input '" << line << "'. " << msg << endl;
+        }
     }
 
-    unsigned int cpus = boost::thread::hardware_concurrency();
-    unsigned int threads = (argc >= 3) ? strtoul(argv[2], NULL, 0) : cpus;
-    if (threads == 0) {
-        cout << "# You must run at least one thread." << endl
-             << "#" << endl;
-        return -1;
+    if (patterns.size() == 0)
+    {
+        cout << "No valid patterns provided. Good bye" << endl;
+        return 0;
+    }
+    else
+    {
+        cout << "#" << endl
+             << "# Running " << threads << " thread" << (threads == 1 ? "" : "s") << "." << endl
+             << "#" << endl
+             << "# Generating seed for " << patterns.size() << " patterns" << endl << endl;
     }
 
-    cout << "# CPUs detected: " << cpus << endl
-         << "#" << endl
-         << "# Running " << threads << " thread" << (threads == 1 ? "" : "s") << "." << endl
-         << "#" << endl
-         << "# Generating seed for pattern \"" << pattern << "\"..." << endl
-         << "#" << endl;
-
-    uint64_t eta50 = getEta50(pattern);
-
-//DEL    start_time = time(NULL);
-    string master_seed, master_seed_hex, account_id;
     vector<boost::thread*> vpThreads;
     for (unsigned int i = 0; i < threads; i++)
-        vpThreads.push_back(new boost::thread(LoopThread, i, eta50, &pattern, &master_seed, &master_seed_hex, &account_id));
+        vpThreads.push_back(new boost::thread(LoopThread, i, patterns));
 
     for (unsigned int i = 0; i < threads; i++)
         vpThreads[i]->join();
-   
-    for (unsigned int i = 0; i < threads; i++)
-        delete vpThreads[i];
- 
-    cout << "#    master seed:     " << master_seed << endl
-         << "#    master seed hex: " << master_seed_hex << endl
-         << "#    account id:      " << account_id << endl
-         << "#" << endl;
 
     return 0;
 }

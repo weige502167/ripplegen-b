@@ -12,8 +12,6 @@
 #include <openssl/dh.h>
 #include "types.h"
 
-//DEL #define isSetBit(x,y)		(!!((x) & (y)))
-
 // maybe use http://www.mail-archive.com/licq-commits@googlegroups.com/msg02334.html
 #ifdef WIN32
 #include <winsock.h>
@@ -97,14 +95,7 @@ int iToSeconds(boost::posix_time::ptime ptWhen);
 boost::posix_time::ptime ptFromSeconds(int iSeconds);
 uint64_t utFromSeconds(int iSeconds);
 
-//DEL extern std::string urlEncode(const std::string& strSrc);
-
-/*
-void intIPtoStr(int ip,std::string& retStr);
-int strIPtoInt(std::string& ipStr);
-*/
-
-template<class Iterator>
+/*DEL template<class Iterator>
 std::string strJoin(Iterator first, Iterator last, std::string strSeperator)
 {
 	std::ostringstream	ossValues;
@@ -115,7 +106,7 @@ std::string strJoin(Iterator first, Iterator last, std::string strSeperator)
 	}
 
 	return ossValues.str();
-}
+}   */
 
 inline static char charHex(int iDigit)
 {

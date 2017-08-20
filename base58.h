@@ -23,7 +23,7 @@
 #include "bignum.h"
 #include "BitcoinUtil.h"
 
-extern const char* ALPHABET;
+const char* ALPHABET = "rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxyz";
 
 inline std::string EncodeBase58(const unsigned char* pbegin, const unsigned char* pend)
 {
@@ -119,10 +119,6 @@ inline bool DecodeBase58(const std::string& str, std::vector<unsigned char>& vch
 {
     return DecodeBase58(str.c_str(), vchRet);
 }
-
-
-
-
 
 inline std::string EncodeBase58Check(const std::vector<unsigned char>& vchIn)
 {

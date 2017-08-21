@@ -18,7 +18,6 @@
 #include <string>
 #include <algorithm>
 #include <vector>
-//DEL #include <boost/functional/hash.hpp>
 
 #include "bignum.h"
 #include "BitcoinUtil.h"
@@ -219,27 +218,8 @@ public:
 
         return EncodeBase58Check(vch);
     }
-
-    int CompareTo(const CBase58Data& b58) const
-    {
-        if (nVersion < b58.nVersion) return -1;
-        if (nVersion > b58.nVersion) return  1;
-        if (vchData < b58.vchData)   return -1;
-        if (vchData > b58.vchData)   return  1;
-        return 0;
-    }
-
-    bool operator==(const CBase58Data& b58) const { return CompareTo(b58) == 0; }
-    bool operator!=(const CBase58Data& b58) const { return CompareTo(b58) != 0; }
-    bool operator<=(const CBase58Data& b58) const { return CompareTo(b58) <= 0; }
-    bool operator>=(const CBase58Data& b58) const { return CompareTo(b58) >= 0; }
-    bool operator< (const CBase58Data& b58) const { return CompareTo(b58) <  0; }
-    bool operator> (const CBase58Data& b58) const { return CompareTo(b58) >  0; }
-
-	friend std::size_t hash_value(const CBase58Data& b58);
 };
 
-extern std::size_t hash_value(const CBase58Data& b58);
 
 #endif
 // vim:ts=4

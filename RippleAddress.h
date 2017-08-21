@@ -6,9 +6,6 @@
 #include "key.h"
 #include "uchar_vector.h"
 
-//DEL #include <boost/thread/mutex.hpp>
-//DEL #include <boost/unordered_map.hpp>
-
 typedef enum {
     VER_NONE                = 1,
     VER_NODE_PUBLIC         = 28,

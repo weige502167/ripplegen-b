@@ -8,7 +8,6 @@ For performance reasons, only prefix search is currently supported.
 
 Requires Boost and OpenSSL.
 
-Build: ./make
 Run:   ./ripplegen [--threads=<thread_count>] [--input=<path_to_file>]
 
 The threads parameter is optional. If omitted, the optimal value is selected
@@ -38,9 +37,7 @@ TODO:
       allowed to provide an initial search value either directly or as a
       passphrase hash (although this can compromise security).
 
-    - Support for coordinated searches across many machines.
-
-Based on original RippleGen by Eric Lombrozo (github.com/CodeSharp).
+Based on original RippleGen by Eric Lombrozo (github.com/CodeShark).
 After being developed only with Visual Studio on Windows, any compatibility
 with other environment is not guaranted. Original makefile is left here
 should somebody need it.

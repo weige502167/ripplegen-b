@@ -86,7 +86,6 @@
   <ItemGroup>
     <ClInclude Include="base58.h" />
     <ClInclude Include="bignum.h" />
-    <ClInclude Include="BigNum64.h" />
     <ClInclude Include="BitcoinUtil.h" />
     <ClInclude Include="key.h" />
     <ClInclude Include="RippleAddress.h" />
@@ -96,7 +95,6 @@
     <ClInclude Include="utils.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="BitcoinUtil.cpp" />
     <ClCompile Include="ripplegen.cpp" />
   </ItemGroup>
   <ItemGroup>

@@ -18,11 +18,12 @@
 #include <string>
 #include <algorithm>
 #include <vector>
+#include <boost/functional/hash.hpp>
 
 #include "bignum.h"
 #include "BitcoinUtil.h"
 
-const char* ALPHABET = "rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxyz";
+extern const char* ALPHABET;
 
 inline std::string EncodeBase58(const unsigned char* pbegin, const unsigned char* pend)
 {
@@ -218,8 +219,27 @@ public:
 
         return EncodeBase58Check(vch);
     }
+
+    int CompareTo(const CBase58Data& b58) const
+    {
+        if (nVersion < b58.nVersion) return -1;
+        if (nVersion > b58.nVersion) return  1;
+        if (vchData < b58.vchData)   return -1;
+        if (vchData > b58.vchData)   return  1;
+        return 0;
+    }
+
+    bool operator==(const CBase58Data& b58) const { return CompareTo(b58) == 0; }
+    bool operator!=(const CBase58Data& b58) const { return CompareTo(b58) != 0; }
+    bool operator<=(const CBase58Data& b58) const { return CompareTo(b58) <= 0; }
+    bool operator>=(const CBase58Data& b58) const { return CompareTo(b58) >= 0; }
+    bool operator< (const CBase58Data& b58) const { return CompareTo(b58) <  0; }
+    bool operator> (const CBase58Data& b58) const { return CompareTo(b58) >  0; }
+
+	friend std::size_t hash_value(const CBase58Data& b58);
 };
 
+extern std::size_t hash_value(const CBase58Data& b58);
 
 #endif
 // vim:ts=4

@@ -6,6 +6,9 @@
 #include "key.h"
 #include "uchar_vector.h"
 
+#include <boost/thread/mutex.hpp>
+#include <boost/unordered_map.hpp>
+
 typedef enum {
     VER_NONE                = 1,
     VER_NODE_PUBLIC         = 28,
@@ -24,6 +27,8 @@ public:
     uint128 getSeed() const;
     const std::vector<unsigned char>& getAccountPublic() const;
     void setAccountPublic(const uchar_vector& generator, int seq);
+	std::vector<unsigned char> getAccountPublic(const uchar_vector& generator, int seq);
+	std::vector<unsigned char> getAccountPrivate(const uchar_vector& generator, int seq);
     uint160 getAccountID() const;
     void setAccountID(const uint160& hash160);
     std::string humanAccountID() const;
@@ -59,6 +64,18 @@ void RippleAddress::setAccountPublic(const uchar_vector& generator, int seq)
     SetData(VER_ACCOUNT_PUBLIC, pubkey.GetPubKey());
 }
 
+std::vector<unsigned char> RippleAddress::getAccountPublic(const uchar_vector& generator, int seq)
+{
+	CKey    pubkey(generator, seq);
+	return pubkey.GetPubKey();
+}
+
+std::vector<unsigned char> RippleAddress::getAccountPrivate(const uchar_vector& generator, int seq)
+{
+	CKey    prikey(generator, seq);
+	return prikey.GetPriKey();
+}
+
 uint160 RippleAddress::getAccountID() const
 {
     switch (nVersion) {
@@ -73,7 +90,7 @@ uint160 RippleAddress::getAccountID() const
         return Hash160(vchData);
 
     default:
-        throw std::runtime_error("bad source: " + std::to_string(nVersion));
+        throw std::runtime_error(str(boost::format("bad source: %d") % int(nVersion)));
     }
 }
 
@@ -103,7 +120,7 @@ std::string RippleAddress::humanAccountID() const
     }
 
     default:
-        throw std::runtime_error("bad source: " + std::to_string(nVersion));
+        throw std::runtime_error(str(boost::format("bad source: %d") % int(nVersion)));
     }
 }
 
@@ -117,7 +134,7 @@ std::string RippleAddress::humanSeed() const
         return ToString();
 
     default:
-        throw std::runtime_error("bad source: " + std::to_string(nVersion));
+        throw std::runtime_error(str(boost::format("bad source: %d") % int(nVersion)));
     }
 }
 

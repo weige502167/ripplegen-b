@@ -1,6 +1,6 @@
 
 // Support 64-bit word operations on 32-bit platforms
-/*DEL
+
 static int BN_add_word64(BIGNUM *a, uint64 w)
 {
 	CBigNum bn(w);
@@ -26,4 +26,3 @@ static uint64 BN_div_word64(BIGNUM *a, uint64 w)
 	CAutoBN_CTX ctx;
 	return (BN_div(a, NULL, a, &bn, ctx) == 1) ? 0 : ((uint64)-1);
 }
-*/

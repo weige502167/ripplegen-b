@@ -1,0 +1,12 @@
+master seed:		sh8i92YRnEjJy3fpi9CQb9fo2MLhq
+master seed hex:	966C0F68643EFBA50D58D1FFFB979839
+account id:		rs3F29YA9tVHsyFSGLYyDjQikVZheBy6fE
+master seed:		sh8i92YRnEjJy3fpFQxADfVFG11V6
+master seed hex:	966C0F68643EFBA50D58D17795B0EF42
+account id:		rsyqzQT95ZTXSMmMaS63mgSoEJdfPCjpdT
+master seed:		sh8i92YRnEjJy3fpFb9ozjqS48BEE
+master seed hex:	966C0F68643EFBA50D58D185624E4516
+account id:		rsUhVbhyep9NW1ybTqrXvBwJamSgwCXPse
+master seed:		sh8i92YRnEjJy3fpinByok2Qv1fr3
+master seed hex:	966C0F68643EFBA50D58D1F9EC93E87B
+account id:		rspYckLrXDfbgMebvGmcMGJHnJJDAGdGH8

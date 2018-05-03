@@ -29,16 +29,48 @@
 //
 
 #include "RippleAddress.h"
-#include <fstream>
 #include <iostream>
 #include <stdint.h>
-#include <thread>
+#include <boost/thread.hpp>
 #include <openssl/rand.h>
 
-#define UPDATE_ITERATIONS 10000
+#define UPDATE_ITERATIONS 1000
 
 using namespace std;
 
+boost::mutex mutex;
+bool fDone = false;
+
+uint64_t start_time;
+uint64_t total_searched;
+
+const char* ALPHABET = "rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxyz";
+
+static string strOutPath;
+
+char charHex(int iDigit)
+{
+    return iDigit < 10 ? '0' + iDigit : 'A' - 10 + iDigit;
+}
+
+int hexCharToInt(char c)  
+{   
+	if (c >= '0' && c <= '9') return (c - '0');  
+	if (c >= 'A' && c <= 'F') return (c - 'A' + 10);  
+	if (c >= 'a' && c <= 'f') return (c - 'a' + 10);  
+	return 0;  
+}  
+
+char* hexstringToBytes(string s)  
+{           
+	int sz = s.length();  
+	char *ret = new char[sz/2];  
+	for (int i=0 ; i <sz ; i+=2) {  
+		ret[i/2] = (char) ((hexCharToInt(s.at(i)) << 4)  
+			| hexCharToInt(s.at(i+1)));  
+	}  
+	return ret;  
+}
 
 void getRand(unsigned char *buf, int num)
 {
@@ -49,190 +81,287 @@ void getRand(unsigned char *buf, int num)
     }
 }
 
-static bool startsWith(const string& input, const string& pattern)
+void writedatatofile(string msg)
 {
-    for (int i = 0; i < pattern.size(); i++)
-    {
-        if (input[i] != pattern[i])
-            return false;
-    }
+	FILE* fidwrite = fopen(strOutPath.c_str(),"a+");  
+	if(fidwrite == NULL)  
+	{  
+		printf("打开%s失败",strOutPath.c_str());  
+		return ;  
+	}  
 
-    return true;
+	fputs(msg.c_str(),fidwrite);
+	//printf("msg=[%s]\n",msg.c_str());
+
+	fclose(fidwrite);
 }
 
-void LoopThread(unsigned int n, vector<string> sourcePatterns)
+void LoopThread(unsigned int n, uint64_t eta50, string* ppattern,
+                string* pmaster_seed, string* pmaster_seed_hex, string* paccount_id, string* ppreseed)
 {
     RippleAddress naSeed;
     RippleAddress naAccount;
+    string        pattern = *ppattern;
     string        account_id;
+	string		  strPreSeed = *ppreseed;
 
-    char fname[128];
-    sprintf_s(fname, 128, "result_%i.dat", n);
-
-    uint128 key;
-    getRand(key.begin(), key.size());
-
-    uint64_t start_time = time(NULL);
     uint64_t count = 0;
+    uint64_t last_count = 0;
+	RippleAddress naGenerator;
+    while(1)
+	{
+		uint128 key;
+		
+		unsigned char* p = key.begin();
+		if (strPreSeed.length()>key.size()*2)
+		{
+			strPreSeed = strPreSeed.substr(0, key.size()*2);
+		}
+		
+		char* pHex = hexstringToBytes(strPreSeed);
+		
+// 		printf("strPreSeed:[%d]\n", strPreSeed.length());
+// 		for (int i=0; i<strPreSeed.length()/2;i++)
+// 		{
+// 			printf("%02x ", pHex[i]);
+// 			if (i>1&&i%8==0)
+// 			{
+// 				printf("\n");
+// 			}
+// 		}
+// 		printf("\n");
+		
+		memcpy((char*)p, pHex, strPreSeed.length()/2);
 
-    //TODO: I'm not sure how these things work in C++ :-(  Better make own copy of the vector to avoid concurrency problems
-    size_t numOfPatterns = sourcePatterns.size();
-    vector<string> patterns;
-    for (int i = 0; i < numOfPatterns; i++)
-    {
-        string copy = sourcePatterns[i].c_str();
-        patterns.push_back(copy);
-    }
+		getRand(p+strPreSeed.length()/2, key.size()-strPreSeed.length()/2);
 
-    do {
-        naSeed.setSeed(key);
-        RippleAddress naGenerator = createGeneratorPublic(naSeed);
+// 		unsigned char* pkey = key.begin();
+// 		printf("pkey:[%d]\n", key.size());
+// 		for (int i=0; i<key.size();i++)
+// 		{
+// 			printf("%02x", pkey[i]);
+// 			if (i>1&&i%8==0)
+// 			{
+// 				printf("\n");
+// 			}
+// 		}
+// 		printf("\n");
+
+		naSeed.setSeed(key);
+// 		if (naSeed.humanSeed().substr(0, strPreSeed.size())!=strPreSeed)
+// 		{
+// 			cout << "seed : " << naSeed.humanSeed() << endl;
+// 			continue;
+// 		}
+		
+        naGenerator = createGeneratorPublic(naSeed);
         naAccount.setAccountPublic(naGenerator.getAccountPublic(), 0);
         account_id = naAccount.humanAccountID();
         count++;
-
-        for (size_t i = 0; i < numOfPatterns; i++)
-        {
-            if (startsWith(account_id, patterns[i]))
-            {
-                Beep(750, 500);
-                string secret = naSeed.humanSeed();
-                cout << endl << "secret: " << secret << "\t public: " << account_id << "\t (pattern: " << patterns[i] << ")" << endl << endl;
-
-                FILE* f = fopen(fname, "at");
-                if (f)
-                {
-                    fprintf(f, "%s;%s;%s\n", account_id.c_str(), naSeed.humanSeed().c_str(), patterns[i].c_str());
-                    fclose(f);
-                }
-
-                cout << "DEBUG: key=" << key.ToString() << endl << "===============================" << endl;
-            }
-        }
-
-        if (count % UPDATE_ITERATIONS == 0)
-        {
+        if (count % UPDATE_ITERATIONS == 0) {
+            boost::unique_lock<boost::mutex> lock(mutex);
+            total_searched += count - last_count;
+            last_count = count;
             uint64_t nSecs = time(NULL) - start_time;
-            start_time = time(NULL);
-            cout << "(thread " << n << ") Another " << UPDATE_ITERATIONS << " items tested (took " << nSecs << "sec, last " << account_id << ")" << endl;
+            double speed = (1.0 * total_searched)/nSecs;
+            const char* unit = "seconds";
+            double eta50f = eta50/speed;
+            if (eta50f > 100) {
+                unit = "minutes";
+                eta50f /= 60;
+
+                if (eta50f > 100) {
+                    unit = "hours";
+                    eta50f /= 60;
+
+                    if (eta50f > 48) {
+                        unit = "days";
+                        eta50f /= 24;
+                    }
+                }
+            }
+
+            /*cout << "# Thread " << n << ": " << count << " seeds." << endl
+                 << "#" << endl
+                 << "#           Total Speed:    " << speed << " seeds/second" << endl
+                 << "#           Total Searched: " << total_searched << endl
+                 << "#           Total Time:     " << nSecs << " seconds" << endl
+                 << "#           ETA 50%:        " << eta50f << " " << unit << endl
+                 << "#           Last:           " << account_id << endl
+                 << "#           Pattern:        " << pattern << endl
+                 << "#" << endl;*/
         }
         key++;
-    } while (true);
+        boost::this_thread::yield();
 
-//What would this be good for?    string pmaster_seed_hex = naSeed.getSeed().ToString();
+		if ((account_id.substr(0, pattern.size()) == pattern))
+		{
+			string strmsg1 = "master seed:		"+naSeed.humanSeed()+"\n";
+			string strmsg2 = "master seed hex:	"+naSeed.getSeed().ToString()+"\n";
+			string strmsg3 = "account id:		"+account_id+"\n";
+
+			if (strOutPath.length()>0)
+			{
+				writedatatofile(strmsg1+strmsg2+strmsg3);
+			}
+			cout << strmsg1+strmsg2+strmsg3 << endl;
+		}
+
+		if (fDone)
+		{
+			break;
+		}
+    }
+
+    boost::unique_lock<boost::mutex> lock(mutex);
+    if (fDone) return;
+    fDone = true;
+
+    cout << "#    *** Found by thread " << n << ". ***" << endl
+         << "#" << endl;
+
+    *pmaster_seed = naSeed.humanSeed();
+    *pmaster_seed_hex = naSeed.getSeed().ToString();
+    *paccount_id = account_id;
+
+	//std::vector<unsigned char> vuchar = naAccount.getAccountPublic(naGenerator.getAccountPublic(), 0);
+	
+	//int ncount = vuchar.size();
+	//printf("ncount = [%d]\n#	PubKey=[", ncount);
+	//for (int i = 0; i < ncount;i++)
+	//{
+	//	printf("%02X",vuchar[i]);
+	//}
+	//printf("]\n");
 }
 
 
 // isPatternValid can be changed depending on encoding being used.
 bool isPatternValid(const string& pattern, string& msg)
 {
-    if (pattern[0] != 'r' || pattern.find("0") != string::npos || pattern.find("l") != string::npos ||
-        pattern.find("I") != string::npos || pattern.find("O") != string::npos)
-    {
-        msg = "Pattern must begin with an 'r' and must not contain any of '0', 'l', 'I', 'O'.";
+    // Check for valid ripple account id.
+    // TODO: Implement it correctly
+    if (pattern.size() == 0) {
+        msg = "Pattern cannot be empty.";
+        return false;
+    }
+    if (pattern[0] != 'r') {
+        msg = "Pattern must begin with an 'r'.";
         return false;
     }
     return true;
 }
 
-void usage()
+// eta50 = ceiling(1/log_2(n/(n-1))) where n = 58^length
+//   the minimum number of iterations such that there's at
+//   least a 50% chance of finding a match.
+uint64_t getEta50(const string& pattern)
 {
-    cout << "#" << endl
-        << "# Usage: ripplegen.exe [--threads=<number_of_threads_to_run>] --input=<file_with_patterns> ... " << endl
-        << "# Patterns are only used for prefix check, i.e. matching addresses will start with a pattern." << endl
-        << "# Available letters: rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxyz" << endl
-        << "# Input file must contain one prefix pattern per line" << endl
-        << "#" << endl;
+    const uint64_t eta50[] = { 0, 0, 40, 2332, 135241, 7843997, 454951843, 26387206905ull,
+                               1530458000460ull, 8876654026661ull, 5148460713546319ull,
+                               298610721385686486ull, 17319421840369816160ull };
+    unsigned int len = pattern.size();
+    if (len > 12) return 0xffffffffffffffffull;
+    return eta50[len]; 
+}
+
+string readdiskfile(string path)
+{
+	FILE * fid = fopen(path.c_str(),"r");  
+	if(fid == NULL)  
+	{  
+		printf("打开%s失败",path.c_str());  
+		return NULL;  
+	}  
+
+	char line[1024];  
+	memset(line,0,1024);  
+	fgets(line,1024,fid);  
+	//printf("%s\n", line); //输出  
+		
+	fclose(fid); 
+
+	return line;
 }
 
 int main(int argc, char* argv[])
 {
-    if (argc < 1)
-    {
-        usage();
+    if (argc < 2) {
+        cout << "# Usage: " << argv[0] << " -s xxx.txt -f xxx.txt -o xxx.txt [threads=cpus available]" << endl
+             << "#" << endl;
         return 0;
     }
 
-    string inputFilename;
-    unsigned int threads = 0;
+	string seed;
+	string pattern;
+	
+	for (int i=1; i<argc;i++)
+	{
+		string strArgument = argv[i];
+		//cout<<strArgument<<endl;
+		if (strArgument.compare("-s")==0)
+		{
+			string strSeedPath = argv[i+1];
 
-    for (int i = 1; i < argc; i++)
-    {
-        char* arg = argv[i];
+			seed = readdiskfile(strSeedPath);
+		}
+		else if (strArgument.compare("-f")==0)
+		{
+			string strPatternPath = argv[i+1];
 
-        if (startsWith(arg, "--threads="))
-        {
-            threads = std::stoi(arg + 10);
-        }
-        if (startsWith(arg, "--input="))
-        {
-            inputFilename = arg + 8;
-        }
-    }
+			pattern = readdiskfile(strPatternPath);
+		}
+		else if (strArgument.compare("-o")==0)
+		{
+			strOutPath = argv[i+1];
+		}
+	}
 
-    if (inputFilename.empty())
-    {
-        usage();
-        return 0;
-    }
-    ifstream infile(inputFilename);
-    if (!infile.good())
-    {
-        //File not found
-        usage();
-        return 0;
-    }
-
-    if (0 == threads)
-    {
-        unsigned int cpus = std::thread::hardware_concurrency();
-        cout << "Thread count not specified. Found " << cpus << " logical units, will use them all" << endl;
-        threads = cpus;
-    }
-
-    vector<string> patterns;
-    string line;
+//    string pattern = argv[1];
     string msg;
+	if (!isPatternValid(pattern, msg)) {
+		cout << "# " << msg << endl
+			<< "#" << endl;
+		return -2;
+	}
 
-    while (infile >> line)
-    {
-        if (line.empty())
-        {
-            continue;
-        }
-        if (isPatternValid(line, msg))
-        {
-            patterns.push_back(line);
-        }
-        else
-        {
-            cout << "Bad input '" << line << "'. " << msg << endl;
-        }
+    unsigned int cpus = boost::thread::hardware_concurrency();
+    unsigned int threads = (argc >= 8) ? strtoul(argv[7], NULL, 0) : cpus;
+    if (threads == 0) {
+        cout << "# You must run at least one thread." << endl
+             << "#" << endl;
+        return -1;
     }
 
-    if (patterns.size() == 0)
-    {
-        cout << "No valid patterns provided. Good bye" << endl;
-        return 0;
-    }
-    else
-    {
-        cout << "#" << endl
-             << "# Running " << threads << " thread" << (threads == 1 ? "" : "s") << "." << endl
-             << "#" << endl
-             << "# Generating seeds for " << patterns.size() << " patterns" << endl << endl;
-    }
+    cout << "# CPUs detected: " << cpus << endl
+         << "#" << endl
+         << "# Running " << threads << " thread" << (threads == 1 ? "" : "s") << "." << endl
+         << "#" << endl
+         << "# Generating seed for pattern \"" << pattern << "\"..." << endl
+         << "#" << endl
+		 << "# seed： \"" << seed << "\"..." << endl
+		 << "#" << endl
+		 << "# out path： \"" << strOutPath << "\"..." << endl
+		 << "#" << endl;
 
-    vector<std::thread> vpThreads(threads);
+    uint64_t eta50 = getEta50(pattern);
+
+    start_time = time(NULL);
+    string master_seed, master_seed_hex, account_id;
+    vector<boost::thread*> vpThreads;
     for (unsigned int i = 0; i < threads; i++)
-    {
-        vpThreads[i] = std::thread(LoopThread, i, patterns);
-    }
+        vpThreads.push_back(new boost::thread(LoopThread, i, eta50, &pattern, &master_seed, &master_seed_hex, &account_id, &seed));
 
     for (unsigned int i = 0; i < threads; i++)
-    {
-        vpThreads[i].join();
-    }
+        vpThreads[i]->join();
+   
+    for (unsigned int i = 0; i < threads; i++)
+        delete vpThreads[i];
+ 
+//     cout << "#    master seed:     " << master_seed << endl
+//          << "#    master seed hex: " << master_seed_hex << endl
+//          << "#    account id:      " << account_id << endl
+//          << "#" << endl;
 
     return 0;
 }

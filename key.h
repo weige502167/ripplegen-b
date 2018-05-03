@@ -53,6 +53,21 @@ public:
         return vchPubKey;
     }
 
+	std::vector<unsigned char> GetPriKey() const
+	{
+		int nSize = i2d_ECPrivateKey(pkey, NULL);
+		printf("nSize=[%d]\n", nSize);
+		//assert(nSize<=33);
+		//if (!nSize)
+			//throw std::runtime_error("CKey::GetPriKey() : i2d_ECPrivateKey failed");
+		std::vector<unsigned char> vchPriKey(33, 0);
+		unsigned char* pbegin = &vchPriKey[0];
+		if (i2d_ECPrivateKey(pkey, &pbegin) != nSize)
+			throw std::runtime_error("CKey::GetPriKey() : i2d_ECPrivateKey returned unexpected size");
+		assert(vchPriKey.size()<=33);
+		return vchPriKey;
+	}
+
     ~CKey()
     {
         EC_KEY_free(pkey);
